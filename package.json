@@ -1,0 +1,34 @@
+{
+  "name": "ai-traveller",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "backend",
+    "frontend",
+    "packages/common"
+  ],
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:*",
+    "dev:backend": "npm --workspace backend run dev",
+    "dev:frontend": "npm --workspace frontend run dev",
+    "build": "npm-run-all build:* && node scripts/copy-frontend-dist.js",
+    "build:backend": "npm --workspace backend run build",
+    "build:frontend": "npm --workspace frontend run build",
+    "lint": "npm-run-all lint:*",
+    "lint:backend": "npm --workspace backend run lint",
+    "lint:frontend": "npm --workspace frontend run lint",
+    "format": "npm-run-all format:*",
+    "format:backend": "npm --workspace backend run format",
+    "format:frontend": "npm --workspace frontend run format",
+    "test": "npm-run-all test:*",
+    "test:backend": "npm --workspace backend run test",
+    "test:frontend": "npm --workspace frontend run test",
+    "generate:pdf": "node scripts/generate-pdf.js"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "md-to-pdf": "^5.2.4",
+    "npm-run-all": "^4.1.5"
+  }
+}
