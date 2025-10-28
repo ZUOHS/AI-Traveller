@@ -52,7 +52,6 @@ temp/
 temp.txt
 
 # Docker
-.dockerignore
 docker-compose.override.yml
 
 # OS files
