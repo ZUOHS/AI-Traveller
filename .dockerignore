@@ -55,17 +55,11 @@ docs
 *.md
 submission.pdf
 
-# Frontend source (already built)
-frontend/src
-frontend/public
-frontend/index.html
-frontend/vite.config.js
-frontend/tailwind.config.js
-frontend/postcss.config.js
-frontend/eslint.config.js
+# Frontend source files are needed for build stage
+# Only exclude after build is complete
 
 # Scripts (not needed in production)
-scripts
+# scripts folder is needed for copy-frontend-dist.js during build
 
 # Dist files will be copied, ignore originals
 frontend/dist
