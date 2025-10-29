@@ -2,6 +2,7 @@ import { v4 as uuid } from 'uuid';
 import { DEFAULT_CURRENCY } from '@ai-traveller/common';
 
 import { supabaseAdmin, useMockStore, memoryStore } from './supabaseClient.js';
+import { isTestAccountId } from './testAccount.js';
 import { generateItineraryPlan, generateBudgetPlan } from './aiService.js';
 import { searchPois } from './mapService.js';
 import { createNotFound, createServerError } from '../utils/apiError.js';
@@ -45,8 +46,20 @@ const now = () => new Date().toISOString();
 
 const geocodeCache = new Map();
 
-const persistItinerary = async (tripId, plan) => {
-  if (!useMockStore && supabaseAdmin) {
+const shouldUseSupabase = (userId) => {
+  if (useMockStore || !supabaseAdmin) {
+    return false;
+  }
+
+  if (isTestAccountId(userId) && !env.testAccountUseSupabase) {
+    return false;
+  }
+
+  return true;
+};
+
+const persistItinerary = async (userId, tripId, plan) => {
+  if (shouldUseSupabase(userId)) {
     const { error } = await supabaseAdmin
       .from('itineraries')
       .upsert({
@@ -146,7 +159,7 @@ const enrichItineraryWithGeo = async (plan, { destination }) => {
 export const listTrips = async (userId) => {
   if (!userId) return [];
 
-  if (!useMockStore && supabaseAdmin) {
+  if (shouldUseSupabase(userId)) {
     const { data, error } = await supabaseAdmin
       .from('trips')
       .select('*')
@@ -166,7 +179,7 @@ export const listTrips = async (userId) => {
 };
 
 export const getTrip = async (userId, tripId) => {
-  if (!useMockStore && supabaseAdmin) {
+  if (shouldUseSupabase(userId)) {
     const { data, error } = await supabaseAdmin
       .from('trips')
       .select('*')
@@ -204,7 +217,7 @@ export const createTrip = async (userId, payload) => {
     aiBudget: null
   };
 
-  if (!useMockStore && supabaseAdmin) {
+  if (shouldUseSupabase(userId)) {
     const { error } = await supabaseAdmin.from('trips').insert(
       toSupabaseTrip(userId, trip)
     );
@@ -226,7 +239,7 @@ export const updateTrip = async (userId, tripId, updates) => {
     updatedAt: now()
   };
 
-  if (!useMockStore && supabaseAdmin) {
+  if (shouldUseSupabase(userId)) {
     const { error } = await supabaseAdmin
       .from('trips')
       .update(toSupabaseTrip(userId, merged))
@@ -245,7 +258,7 @@ export const updateTrip = async (userId, tripId, updates) => {
 export const deleteTrip = async (userId, tripId) => {
   await getTrip(userId, tripId);
 
-  if (!useMockStore && supabaseAdmin) {
+  if (shouldUseSupabase(userId)) {
     const { error } = await supabaseAdmin
       .from('trips')
       .delete()
@@ -279,7 +292,7 @@ export const generateAndStoreItinerary = async (userId, tripId, input) => {
     destination: trip.destination
   });
 
-  await persistItinerary(tripId, enrichedPlan);
+  await persistItinerary(userId, tripId, enrichedPlan);
 
   const updated = await updateTrip(userId, tripId, {
     aiSummary: enrichedPlan
@@ -302,7 +315,7 @@ export const generateAndStoreBudget = async (userId, tripId, input) => {
     aiBudget: plan
   });
 
-  if (!useMockStore && supabaseAdmin) {
+  if (shouldUseSupabase(userId)) {
     const { error } = await supabaseAdmin
       .from('budgets')
       .upsert({
@@ -328,7 +341,7 @@ export const getItinerary = async (userId, tripId) => {
   const trip = await getTrip(userId, tripId);
   let plan;
 
-  if (!useMockStore && supabaseAdmin) {
+  if (shouldUseSupabase(userId)) {
     const { data, error } = await supabaseAdmin
       .from('itineraries')
       .select('*')
@@ -350,7 +363,7 @@ export const getItinerary = async (userId, tripId) => {
   });
 
   if (changed) {
-    await persistItinerary(tripId, enrichedPlan);
+    await persistItinerary(userId, tripId, enrichedPlan);
     await updateTrip(userId, tripId, { aiSummary: enrichedPlan });
   }
 
@@ -363,7 +376,7 @@ export const getBudget = async (userId, tripId) => {
     return trip.aiBudget;
   }
 
-  if (!useMockStore && supabaseAdmin) {
+  if (shouldUseSupabase(userId)) {
     const { data, error } = await supabaseAdmin
       .from('budgets')
       .select('*')
@@ -377,3 +390,5 @@ export const getBudget = async (userId, tripId) => {
 
   throw createNotFound('Budget not found');
 };
+
+

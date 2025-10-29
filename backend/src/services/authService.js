@@ -7,12 +7,19 @@ import {
   createServerError
 } from '../utils/apiError.js';
 import { env } from '../config/env.js';
+import { logger } from '../config/logger.js';
 import {
   supabase,
   supabaseAdmin,
   useMockStore,
   memoryStore
 } from './supabaseClient.js';
+import {
+  TEST_ACCOUNT,
+  isTestAccountEmail,
+  isTestAccountUsername,
+  isTestAccountToken
+} from './testAccount.js';
 
 const sanitize = (value) => value?.trim() ?? '';
 const OTP_EXPIRY_MS = 10 * 60 * 1000;
@@ -22,6 +29,30 @@ const generateOtp = () =>
 
 const toKey = (email) => email.toLowerCase();
 
+let testAccountProfileSynced = false;
+let testAccountProfileSyncWarningLogged = false;
+
+const ensureTestAccountProfile = async () => {
+  if (!env.testAccountUseSupabase || !supabaseAdmin || testAccountProfileSynced) {
+    return;
+  }
+
+  try {
+    await supabaseAdmin.from('profiles').upsert({
+      id: TEST_ACCOUNT.id,
+      email: TEST_ACCOUNT.email,
+      username: TEST_ACCOUNT.displayUsername
+    });
+    testAccountProfileSynced = true;
+  } catch (error) {
+    if (!testAccountProfileSyncWarningLogged) {
+      logger.warn('Failed to sync Test account profile to Supabase', {
+        error: error.message
+      });
+      testAccountProfileSyncWarningLogged = true;
+    }
+  }
+};
 const ensureProfileExists = async (userId, email, preferredUsername) => {
   if (!supabaseAdmin) {
     return preferredUsername ?? '';
@@ -93,15 +124,24 @@ const getProfileByUsername = async (username) => {
 };
 
 export const getUserFromToken = async (accessToken) => {
-  if (!accessToken) {
-    return null;
-  }
+	if (!accessToken) {
+		return null;
+	}
 
-  if (!useMockStore && supabase) {
-    const { data, error } = await supabase.auth.getUser(accessToken);
-    if (error || !data?.user) {
-      return null;
-    }
+	if (isTestAccountToken(accessToken)) {
+		return {
+			id: TEST_ACCOUNT.id,
+			email: TEST_ACCOUNT.email,
+			username: TEST_ACCOUNT.displayUsername,
+			metadata: { special: 'test-account' }
+		};
+	}
+
+	if (!useMockStore && supabase) {
+		const { data, error } = await supabase.auth.getUser(accessToken);
+		if (error || !data?.user) {
+			return null;
+		}
     let username = data.user.user_metadata?.username ?? '';
     if (supabaseAdmin) {
       const profile = await getProfileByEmail(data.user.email);
@@ -138,6 +178,15 @@ export const sendOtp = async ({ email, username }) => {
 	let cleanedEmail = sanitize(email).toLowerCase();
 	const cleanedUsernameInput = sanitize(username);
 
+	if (isTestAccountUsername(cleanedUsernameInput) || isTestAccountEmail(cleanedEmail)) {
+		await ensureTestAccountProfile();
+		return {
+			mode: 'login',
+			message: 'Special Test account: use OTP 123456 to sign in.',
+			email: TEST_ACCOUNT.email
+		};
+	}
+
 	if (!cleanedEmail && cleanedUsernameInput) {
 		if (!useMockStore && supabaseAdmin) {
 			const profileByUsername = await getProfileByUsername(cleanedUsernameInput);
@@ -159,6 +208,7 @@ export const sendOtp = async ({ email, username }) => {
 	if (!cleanedEmail) {
 		throw createBadRequest('邮箱或用户名不能为空');
 	}
+
 
 	if (!useMockStore && supabase && supabaseAdmin) {
 		const existingProfile = await getProfileByEmail(cleanedEmail);
@@ -221,6 +271,21 @@ export const sendOtp = async ({ email, username }) => {
 export const verifyOtp = async ({ email, token }) => {
   const cleanedEmail = sanitize(email).toLowerCase();
   const cleanedToken = sanitize(token);
+
+  if (
+    cleanedToken === TEST_ACCOUNT.otp &&
+    (!cleanedEmail || isTestAccountEmail(cleanedEmail))
+  ) {
+    await ensureTestAccountProfile();
+    return {
+      token: TEST_ACCOUNT.token,
+      user: {
+        id: TEST_ACCOUNT.id,
+        email: TEST_ACCOUNT.email,
+        username: TEST_ACCOUNT.displayUsername
+      }
+    };
+  }
 
   if (!cleanedEmail || !cleanedToken) {
     throw createBadRequest('邮箱和验证码均为必填项');
@@ -289,4 +354,7 @@ export const verifyOtp = async ({ email, token }) => {
     user
   };
 };
+
+
+
 

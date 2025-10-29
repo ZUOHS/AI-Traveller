@@ -8,6 +8,14 @@ const number = (value, fallback) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const toBoolean = (value, defaultValue = false) => {
+  if (value === undefined || value === null || value.trim() === '') {
+    return defaultValue;
+  }
+  const normalized = value.trim().toLowerCase();
+  return ['true', '1', 'yes', 'y', 'on'].includes(normalized);
+};
+
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
   port: number(process.env.PORT, 8080),
@@ -23,7 +31,8 @@ export const env = {
   iflytekApiSecret: process.env.IFLYTEK_API_SECRET ?? '',
   amapWebServiceKey: process.env.AMAP_WEB_SERVICE_KEY ?? '',
   storageBucket: process.env.STORAGE_BUCKET ?? 'voice-memos',
-  tmpDir: process.env.TMP_DIR ?? 'tmp'
+  tmpDir: process.env.TMP_DIR ?? 'tmp',
+  testAccountUseSupabase: toBoolean(process.env.TEST_ACCOUNT_USE_SUPABASE, true)
 };
 
 export const isProduction = env.nodeEnv === 'production';

@@ -2,6 +2,8 @@ import { v4 as uuid } from 'uuid';
 import { DEFAULT_CURRENCY, EXPENSE_CATEGORIES } from '@ai-traveller/common';
 
 import { supabaseAdmin, useMockStore, memoryStore } from './supabaseClient.js';
+import { isTestAccountId } from './testAccount.js';
+import { env } from '../config/env.js';
 import { createBadRequest, createNotFound, createServerError } from '../utils/apiError.js';
 
 const now = () => new Date().toISOString();
@@ -44,8 +46,20 @@ const getStore = (tripId) => {
   return memoryStore.expenses.get(tripId);
 };
 
+const shouldUseSupabase = (userId) => {
+  if (useMockStore || !supabaseAdmin) {
+    return false;
+  }
+
+  if (isTestAccountId(userId) && !env.testAccountUseSupabase) {
+    return false;
+  }
+
+  return true;
+};
+
 export const listExpenses = async (userId, tripId) => {
-  if (!useMockStore && supabaseAdmin) {
+  if (shouldUseSupabase(userId)) {
     const { data, error } = await supabaseAdmin
       .from('expenses')
       .select('*')
@@ -84,7 +98,7 @@ export const createExpense = async (userId, tripId, payload) => {
     updatedAt: now()
   };
 
-  if (!useMockStore && supabaseAdmin) {
+  if (shouldUseSupabase(userId)) {
     const { error } = await supabaseAdmin
       .from('expenses')
       .insert(toSupabaseExpense(userId, tripId, expense));
@@ -106,7 +120,7 @@ export const updateExpense = async (userId, tripId, expenseId, payload) => {
     throw createBadRequest('不支持的费用类别');
   }
 
-  if (!useMockStore && supabaseAdmin) {
+  if (shouldUseSupabase(userId)) {
     const { data, error } = await supabaseAdmin
       .from('expenses')
       .update({
@@ -145,7 +159,7 @@ export const updateExpense = async (userId, tripId, expenseId, payload) => {
 };
 
 export const deleteExpense = async (userId, tripId, expenseId) => {
-  if (!useMockStore && supabaseAdmin) {
+  if (shouldUseSupabase(userId)) {
     const { error } = await supabaseAdmin
       .from('expenses')
       .delete()
@@ -165,3 +179,4 @@ export const deleteExpense = async (userId, tripId, expenseId) => {
   store.delete(expenseId);
   return { success: true };
 };
+

@@ -5,6 +5,7 @@ import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
 
 let openai = null;
+let responsesApiSupported = true;
 
 if (env.llmApiKey) {
   openai = new OpenAI({
@@ -254,10 +255,29 @@ const fallbackBudget = (request) => {
   };
 };
 
+const completeWithChat = async (prompt) => {
+  const response = await openai.chat.completions.create({
+    model: env.llmModel,
+    messages: [
+      {
+        role: 'system',
+        content: 'You are an advanced travel planning assistant that outputs JSON only.'
+      },
+      { role: 'user', content: prompt }
+    ]
+  });
+  return response?.choices?.[0]?.message?.content ?? '';
+};
+
 const complete = async (prompt) => {
   if (!openai) {
     return null;
   }
+
+  if (!responsesApiSupported || typeof openai.responses?.create !== 'function') {
+    return completeWithChat(prompt);
+  }
+
   try {
     const response = await openai.responses.create({
       model: env.llmModel,
@@ -269,20 +289,11 @@ const complete = async (prompt) => {
       ''
     );
   } catch (error) {
+    responsesApiSupported = false;
     logger.warn('OpenAI responses API unavailable, falling back to chat.completions', {
       error: error.message
     });
-    const response = await openai.chat.completions.create({
-      model: env.llmModel,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an advanced travel planning assistant that outputs JSON only.'
-        },
-        { role: 'user', content: prompt }
-      ]
-    });
-    return response?.choices?.[0]?.message?.content ?? '';
+    return completeWithChat(prompt);
   }
 };
 

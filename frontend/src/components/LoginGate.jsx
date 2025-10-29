@@ -7,6 +7,11 @@ const initialRegisterForm = {
   email: '',
   username: ''
 };
+const TEST_ACCOUNT = {
+  username: 'test',
+  email: 'test@example.com',
+  otp: '123456'
+};
 
 export function LoginGate() {
   const setSession = useSessionStore((state) => state.setSession);
@@ -32,12 +37,38 @@ export function LoginGate() {
   const [otpMessage, setOtpMessage] = useState('');
   const [otpError, setOtpError] = useState('');
 
+  const normalizedLoginIdentifier = loginIdentifier.trim().toLowerCase();
+  const isTestLoginIdentifier =
+    normalizedLoginIdentifier === TEST_ACCOUNT.username ||
+    normalizedLoginIdentifier === TEST_ACCOUNT.email;
+
   const handleSendOtp = async ({ email = '', username = '' }) => {
     setOtpError('');
     setOtpMessage('');
 
     const trimmedEmail = email.trim();
     const trimmedUsername = username.trim();
+    const normalizedEmail = trimmedEmail.toLowerCase();
+    const normalizedUsername = trimmedUsername.toLowerCase();
+
+    if (
+      normalizedUsername === TEST_ACCOUNT.username ||
+      normalizedEmail === TEST_ACCOUNT.email
+    ) {
+      const response = {
+        mode: 'login',
+        message: 'Test account detected: use OTP 123456 to sign in.',
+        email: TEST_ACCOUNT.email
+      };
+
+      setOtpEmail(TEST_ACCOUNT.email);
+      setOtpMode('login');
+      setOtpMessage(response.message);
+      setOtpCode('');
+      setAuthMode('login');
+      return response;
+    }
+
     if (!trimmedEmail && !trimmedUsername) {
       throw new Error('请输入邮箱或用户名');
     }
@@ -105,15 +136,26 @@ export function LoginGate() {
     event.preventDefault();
     setOtpError('');
     try {
-      if (!otpEmail) {
-        throw new Error('请先获取验证码');
-      }
       if (!otpCode.trim()) {
         throw new Error('请输入验证码');
       }
+
+      let emailForVerification = otpEmail;
+
+      if (!emailForVerification && isTestLoginIdentifier) {
+        emailForVerification = TEST_ACCOUNT.email;
+        setOtpEmail(TEST_ACCOUNT.email);
+        setOtpMode('login');
+        setOtpMessage('Test account detected: use OTP 123456 to sign in.');
+      }
+
+      if (!emailForVerification) {
+        throw new Error('请先获取验证码');
+      }
+
       setOtpPending(true);
       const result = await verifyOtp({
-        email: otpEmail,
+        email: emailForVerification,
         token: otpCode.trim()
       });
       await setSession(result.token);
@@ -268,7 +310,7 @@ export function LoginGate() {
             />
             <button
               type="submit"
-              disabled={otpPending || !otpEmail || !otpCode.trim()}
+              disabled={otpPending || !otpCode.trim() || (!otpEmail && !isTestLoginIdentifier)}
               className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {otpPending ? '验证中...' : '提交验证码'}
