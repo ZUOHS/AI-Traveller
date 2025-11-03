@@ -76,9 +76,11 @@ export function checkFrontendEnv() {
   const missing = [];
   const invalid = [];
   const valid = [];
+  const runtimeEnv = typeof window !== 'undefined' ? window.__APP_CONFIG__ ?? {} : {};
+  const metaEnv = typeof import.meta !== 'undefined' ? import.meta.env ?? {} : {};
 
   for (const [key, config] of Object.entries(REQUIRED_ENV_VARS)) {
-    const value = import.meta.env[key];
+    const value = runtimeEnv[key] ?? metaEnv[key];
     
     if (!value || value.trim() === '') {
       missing.push({ key, ...config });

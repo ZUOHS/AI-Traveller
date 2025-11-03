@@ -33,7 +33,7 @@ function createEnvConfig() {
     get supabaseServiceRoleKey() { return process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''; },
     get llmApiUrl() { return process.env.LLM_API_URL ?? ''; },
     get llmApiKey() { return process.env.LLM_API_KEY ?? ''; },
-    get llmModel() { return process.env.LLM_MODEL ?? 'gpt-4o-mini'; },
+    get llmModel() { return process.env.LLM_MODEL ?? 'deepseek-chat'; },
     get iflytekAppId() { return process.env.IFLYTEK_APP_ID ?? ''; },
     get iflytekApiKey() { return process.env.IFLYTEK_API_KEY ?? ''; },
     get iflytekApiSecret() { return process.env.IFLYTEK_API_SECRET ?? ''; },

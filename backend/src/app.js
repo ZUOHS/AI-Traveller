@@ -8,6 +8,7 @@ import morgan from 'morgan';
 import { env, isProduction } from './config/env.js';
 import { router } from './routes/index.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { buildFrontendRuntimeScript } from './config/frontendConfig.js';
 
 const app = express();
 
@@ -27,6 +28,12 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api', router);
+
+app.get('/runtime-config.js', (req, res) => {
+  res.type('application/javascript');
+  res.set('Cache-Control', 'no-store');
+  res.send(buildFrontendRuntimeScript());
+});
 
 if (isProduction) {
   const __filename = fileURLToPath(import.meta.url);
