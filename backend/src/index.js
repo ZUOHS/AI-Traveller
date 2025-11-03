@@ -4,6 +4,16 @@ import path from 'node:path';
 import app from './app.js';
 import { env, isProduction } from './config/env.js';
 import { logger } from './config/logger.js';
+import { checkEnvironmentOnStartup } from './config/envValidator.js';
+
+// 在启动前检查环境变量配置（允许配置模式启动）
+const envValidation = checkEnvironmentOnStartup();
+
+// 如果配置不完整，显示配置模式提示
+if (!envValidation.isValid) {
+  logger.info('🔧 服务器已启动但处于配置模式');
+  logger.info('📝 请访问前端页面完成环境配置');
+}
 
 const ensureTmpDir = () => {
   const dir = path.resolve(env.tmpDir);

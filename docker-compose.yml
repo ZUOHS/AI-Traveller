@@ -5,7 +5,7 @@ services:
     build: .
     container_name: ai-traveller
     env_file:
-      - backend/.env.docker
+      - .env
     ports:
       - "8080:8080"
     restart: unless-stopped
