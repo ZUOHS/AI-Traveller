@@ -5,7 +5,18 @@ import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
 
 let openai = null;
-let responsesApiSupported = true;
+const isResponsesApiLikelySupported = (() => {
+  if (!env.llmApiUrl) {
+    return true;
+  }
+  try {
+    const url = new URL(env.llmApiUrl);
+    return url.hostname.endsWith('openai.com');
+  } catch {
+    return true;
+  }
+})();
+let responsesApiSupported = isResponsesApiLikelySupported;
 
 if (env.llmApiKey) {
   openai = new OpenAI({
@@ -290,7 +301,10 @@ const complete = async (prompt) => {
     );
   } catch (error) {
     responsesApiSupported = false;
-    logger.warn('OpenAI responses API unavailable, falling back to chat.completions', {
+    const logMethod = error?.status === 404 || /404/i.test(error?.message ?? '')
+      ? 'info'
+      : 'warn';
+    logger[logMethod]('OpenAI responses API unavailable, falling back to chat.completions', {
       error: error.message
     });
     return completeWithChat(prompt);
