@@ -18,7 +18,49 @@ app.use(
     credentials: true
   })
 );
-app.use(helmet());
+const cspDirectives = {
+  ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+  'script-src': [
+    "'self'",
+    "'unsafe-inline'",
+    'https://webapi.amap.com',
+    'https://cache.amap.com'
+  ],
+  'script-src-elem': [
+    "'self'",
+    "'unsafe-inline'",
+    'https://webapi.amap.com',
+    'https://cache.amap.com'
+  ],
+  'style-src': [
+    "'self'",
+    "'unsafe-inline'",
+    'https://webapi.amap.com',
+    'https://cache.amap.com'
+  ],
+  'img-src': [
+    "'self'",
+    'data:',
+    'blob:',
+    'https://webapi.amap.com',
+    'https://a.amap.com',
+    'https://cache.amap.com'
+  ],
+  'connect-src': [
+    "'self'",
+    'https://restapi.amap.com',
+    'https:'
+  ]
+};
+
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: cspDirectives
+    },
+    crossOriginEmbedderPolicy: false
+  })
+);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
