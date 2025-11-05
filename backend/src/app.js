@@ -23,14 +23,20 @@ const cspDirectives = {
   'script-src': [
     "'self'",
     "'unsafe-inline'",
+    "'unsafe-eval'",
+    'blob:',
     'https://webapi.amap.com',
-    'https://cache.amap.com'
+    'https://cache.amap.com',
+    'https://restapi.amap.com'
   ],
   'script-src-elem': [
     "'self'",
     "'unsafe-inline'",
+    "'unsafe-eval'",
+    'blob:',
     'https://webapi.amap.com',
-    'https://cache.amap.com'
+    'https://cache.amap.com',
+    'https://restapi.amap.com'
   ],
   'style-src': [
     "'self'",
@@ -44,12 +50,19 @@ const cspDirectives = {
     'blob:',
     'https://webapi.amap.com',
     'https://a.amap.com',
-    'https://cache.amap.com'
+    'https://cache.amap.com',
+    'https://c-webapi.amap.com'
   ],
   'connect-src': [
     "'self'",
     'https://restapi.amap.com',
     'https:'
+  ],
+  'worker-src': [
+    "'self'",
+    'blob:',
+    'https://webapi.amap.com',
+    'https://cache.amap.com'
   ]
 };
 
