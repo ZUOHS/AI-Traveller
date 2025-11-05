@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { Buffer } from 'node:buffer';
+import WebSocket from 'ws';
 
 import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
@@ -178,21 +179,19 @@ const callIflytek = async (buffer, mimeType) => {
       return;
     }
 
-    websocket.onerror = (event) => {
-      const error =
-        event?.error instanceof Error ? event.error : new Error('iFlytek websocket connection error');
-      done(error);
-    };
+    websocket.on('error', (error) => {
+      done(error instanceof Error ? error : new Error('iFlytek websocket connection error'));
+    });
 
-    websocket.onclose = (event) => {
+    websocket.on('close', (code) => {
       if (!resolved) {
-        done(new Error(`iFlytek websocket closed unexpectedly (code: ${event.code ?? 'unknown'})`));
+        done(new Error(`iFlytek websocket closed unexpectedly (code: ${code ?? 'unknown'})`));
       }
-    };
+    });
 
-    websocket.onmessage = (event) => {
+    websocket.on('message', (data) => {
       try {
-        const payload = JSON.parse(event.data);
+        const payload = JSON.parse(data.toString());
         const code = payload?.header?.code;
 
         if (code !== 0) {
@@ -218,9 +217,9 @@ const callIflytek = async (buffer, mimeType) => {
       } catch (error) {
         done(error);
       }
-    };
+    });
 
-    websocket.onopen = async () => {
+    websocket.on('open', async () => {
       const audioBuffer = audioMeta.buffer;
       const chunks = [];
 
@@ -288,7 +287,7 @@ const callIflytek = async (buffer, mimeType) => {
       } catch (error) {
         done(error);
       }
-    };
+    });
   });
 };
 
